@@ -1,5 +1,6 @@
 /*
   Copyright 2010, jimmikaelkael <jimmikaelkael@wanadoo.fr>
+  LUNA modifications: Danny Nunez (dnunezx) 2026
   Licenced under Academic Free License version 3.0
   Review Open PS2 Loader README & LICENSE files for further details.
 
@@ -12,6 +13,8 @@
 
 #define ABI_EABI64 // force all register names to EABI64 (legacy toolchain)
 #include "as_reg_compat.h"
+
+#define PADOPEN_HOOK  0
 
 .set push
 .set noreorder
@@ -32,9 +35,19 @@
 
 /* iopmgr.c */
 .extern New_SifSetDma
+.extern Old_ExecPS2
+.extern Old_CreateThread
+.extern padOpen_hooked
+
+/* padhook.c */
+.extern Reset_Padhook
+.extern Install_PadOpen_Hook
 
 .globl  Hook_SifSetDma
+.globl  Hook_ExecPS2
+.globl  Hook_CreateThread
 .globl  CleanExecPS2
+.globl  iResetEE
 
 /*
  * _SifSetDma: function designed to use our own stack during IOP reboot trap
@@ -106,6 +119,82 @@ Hook_SifSetDma:
     nop
 
 .end    Hook_SifSetDma
+
+/* Reinstall the pad hook when a game chains into another EE executable. */
+.ent    Hook_ExecPS2
+Hook_ExecPS2:
+    /* Only intercept normal EE entry points. */
+    lui     $v0, 0x0010
+    sltu    $v0, $a0, $v0
+    bne     $v0, $zero, 1f
+    daddu   $s0, $a0, $zero
+
+    daddu   $s1, $a1, $zero
+    daddu   $s2, $a2, $zero
+    daddu   $s3, $a3, $zero
+    daddu   $s4, $sp, $zero
+
+    la      $sp, _stack_end
+    jal     Reset_Padhook
+    nop
+
+    lui     $a0, 0x0010
+    lui     $a1, 0x01ff
+    jal     Install_PadOpen_Hook
+    addiu   $a2, $zero, PADOPEN_HOOK
+    la      $v1, padOpen_hooked
+    sw      $v0, 0x0000($v1)
+
+    daddu   $a0, $s0, $zero
+    daddu   $a1, $s1, $zero
+    daddu   $a2, $s2, $zero
+    jal     InitRegsExecPS2
+    daddu   $a3, $s3, $zero
+1:
+    lw      $v0, Old_ExecPS2
+    jr      $v0
+    nop
+.end    Hook_ExecPS2
+
+/* Reinstall the pad hook before low-priority pad-management threads start. */
+.ent    Hook_CreateThread
+Hook_CreateThread:
+    la      $v1, padOpen_hooked
+    lw      $v0, 0x0000($v1)
+    bne     $v0, $zero, 2f
+    nop
+
+    /* ee_thread_t initial_priority == 0x14, current_priority == 0x18. */
+    lw      $v0, 0x0014($a0)
+    beq     $v0, $zero, 1f
+    slti    $v0, $v0, 5
+    beq     $v0, $zero, 2f
+    nop
+    lw      $v0, 0x0018($a0)
+    bne     $v0, $zero, 2f
+1:
+    daddu   $a1, $sp, $zero
+    la      $sp, _stack_end
+    addiu   $sp, $sp, -0x20
+    sd      $ra, 0x0000($sp)
+    sd      $a1, 0x0008($sp)
+    sd      $a0, 0x0010($sp)
+
+    lui     $a0, 0x0010
+    lui     $a1, 0x01ff
+    jal     Install_PadOpen_Hook
+    addiu   $a2, $zero, PADOPEN_HOOK
+    la      $v1, padOpen_hooked
+    sw      $v0, 0x0000($v1)
+
+    ld      $a0, 0x0010($sp)
+    ld      $ra, 0x0000($sp)
+    ld      $sp, 0x0008($sp)
+2:
+    lw      $v0, Old_CreateThread
+    jr      $v0
+    nop
+.end    Hook_CreateThread
 
 .ent CleanExecPS2
 CleanExecPS2:
@@ -194,5 +283,14 @@ InitRegsExecPS2:
     jr      $ra
     ctc1    $zero, $31
 .end InitRegsExecPS2
+
+/* ResetEE syscall entry usable from the VBLANK interrupt handler. */
+.ent iResetEE
+iResetEE:
+    li      $v1, -1
+    syscall
+    jr      $ra
+    nop
+.end iResetEE
 
 .set pop

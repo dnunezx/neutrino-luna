@@ -1,6 +1,7 @@
 /*
   Copyright 2009-2010, Ifcaro, jimmikaelkael & Polo
   Copyright 2006-2008 Polo
+  LUNA modifications: Danny Nunez (dnunezx) 2026
   Licenced under Academic Free License version 3.0
   Review OpenUsbLd README & LICENSE files for further details.
 
@@ -21,6 +22,7 @@
 #include "asm.h"
 #include "cheat_api.h"
 #include "gsm_api.h"
+#include "padhook.h"
 #include "eecore_config.h"
 
 extern void *_stack_end;
@@ -104,6 +106,9 @@ int main(int argc, char **argv)
         argv++;
         argc--;
 
+        if (eec.flags & EECORE_FLAG_IGR)
+            Reset_Padhook();
+
         // wipe user memory
         WipeUserMemory((void *)&_stack_end, (void *)eec.ModStorageStart);
         // The upper half (from ModStorageEnd to GetMemorySize()) is taken care of by LoadExecPS2().
@@ -117,6 +122,11 @@ int main(int argc, char **argv)
         int r = SifLoadElf(argv[0], &elf);
         if (!r) {
             apply_patches(argv[0]);
+
+            if ((eec.flags & EECORE_FLAG_IGR) && !(eec.flags & EECORE_FLAG_UNHOOK)) {
+                Install_IGR();
+                Install_PadOpen_Hook(0x00100000, 0x01ff0000, PADOPEN_HOOK);
+            }
 
             // Patch PS2LOGO if needed
             if (!_strcmp(argv[0], "rom0:PS2LOGO") && (eec.flags & EECORE_FLAG_LOGO_PATCH))

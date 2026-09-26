@@ -1,3 +1,4 @@
+// LUNA modifications: Danny Nunez (dnunezx) 2026
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -29,6 +30,7 @@ struct SSystemSettings {
     char *sGC;
     char *sGSM;
     char *sCFGFile;
+    char *sIGRPath;
     int bDebug;
     int bLogo;
     int bQuickBoot;

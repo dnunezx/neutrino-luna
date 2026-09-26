@@ -161,6 +161,10 @@ Options:
   -dbc              Enable debug colors
   -logo             Enable logo (adds rom0:PS2LOGO to arguments)
   -qb               Quick-Boot directly into load environment
+  -igr=<target>     Enable LUNA in-game return. Hold L1+L2+R1+R2+Start+Select
+                    for roughly one second. Use `hdd` to return through the
+                    browser/HDD boot chain, or an mc0:/mc1: path for direct return.
+                    Example: -igr=hdd
 
   --b               Break, all following parameters are passed to the ELF
 

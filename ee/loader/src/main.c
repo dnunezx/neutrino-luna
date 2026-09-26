@@ -1,3 +1,4 @@
+// LUNA modifications: Danny Nunez (dnunezx) 2026
 // libc/newlib
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,6 +131,8 @@ void print_usage()
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
+    printf("  -igr=<target>     Enable LUNA in-game return. Use hdd for the HDD boot chain,\n");
+    printf("                    or provide an mc0:/mc1: ELF path for direct return\n");
     printf("\n");
     printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
@@ -186,6 +189,8 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sGSM = &argv[i][5];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
+        else if (!strncmp(argv[i], "-igr=", 5))
+            sys.sIGRPath = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue; // already handled before config loading
         else if (!strncmp(argv[i], "-dbc", 4))
@@ -1044,6 +1049,28 @@ int main(int argc, char *argv[])
     strncpy(sys.eecore.GameID, sGameID, 12);
     sys.eecore.CheatList     = NULL;
     sys.eecore.ModStorageEnd = irxptr_end;
+    if (sys.sIGRPath != NULL && sys.sIGRPath[0] != '\0') {
+        int invalid_igr_device = strcmp(sys.sIGRPath, EECORE_EXIT_HDD_CHAIN) &&
+                                 strncmp(sys.sIGRPath, "mc0:", 4) && strncmp(sys.sIGRPath, "mc1:", 4);
+#ifdef LUNA_EMULATOR_HOST_IGR
+        invalid_igr_device = invalid_igr_device && strncmp(sys.sIGRPath, "host:", 5);
+#endif
+        if (invalid_igr_device) {
+#ifdef LUNA_EMULATOR_HOST_IGR
+            printf("ERROR: -igr target must be hdd, mc0:, mc1:, or emulator host:\n");
+#else
+            printf("ERROR: -igr target must be hdd, mc0:, or mc1:\n");
+#endif
+            return -1;
+        }
+        if (strlen(sys.sIGRPath) >= sizeof(sys.eecore.ExitPath)) {
+            printf("ERROR: -igr path is too long (maximum %u characters)\n", (unsigned int)sizeof(sys.eecore.ExitPath) - 1);
+            return -1;
+        }
+        strncpy(sys.eecore.ExitPath, sys.sIGRPath, sizeof(sys.eecore.ExitPath) - 1);
+        sys.eecore.ExitPath[sizeof(sys.eecore.ExitPath) - 1] = '\0';
+        sys.eecore.flags |= EECORE_FLAG_IGR;
+    }
 
     // Append cheat data after IRX table and point CheatList to it
     if (sys.cheats != NULL && sys.cheats_count > 0) {
@@ -1170,6 +1197,7 @@ int main(int argc, char *argv[])
     printf("- iop_rm[1] = %ld\n",   set_ee_core->iop_rm[1]);
     printf("- iop_rm[2] = %ld\n",   set_ee_core->iop_rm[2]);
     printf("- mod_base  = 0x%p\n",  set_ee_core->ModStorageStart);
+    printf("- igr_path  = %s\n", set_ee_core->ExitPath[0] ? set_ee_core->ExitPath : "disabled");
     printf("- args:\n");
     for (int i = 0; i < ee_core_argc; i++) {
         printf("  - [%d] %s\n", i, ee_core_argv[i]);

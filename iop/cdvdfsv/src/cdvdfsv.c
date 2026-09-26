@@ -1,5 +1,6 @@
 /*
   Copyright 2009, jimmikaelkael
+  LUNA modifications: Danny Nunez (dnunezx) 2026
   Licenced under Academic Free License version 3.0
   Review open-ps2-loader README & LICENSE files for further details.
 */
@@ -22,10 +23,13 @@ static void cdvdfsv_startrpcthreads(void);
 static void cdvdfsv_rpc0_th(void *args);
 static void cdvdfsv_rpc1_th(void *args);
 static void cdvdfsv_rpc2_th(void *args);
+static void cdvdfsv_rpc_sd_th(void *args);
 static void *cbrpc_cdinit(int fno, void *buf, int size);
 static void *cbrpc_cddiskready(int fno, void *buf, int size);
 static void *cbrpc_cddiskready2(int fno, void *buf, int size);
 static void *cbrpc_S596(int fno, void *buf, int size);
+static void *cbrpc_shutdown(int fno, void *buf, int size);
+static int shutdown_services(int poweroff);
 
 u8 *cdvdfsv_buf;
 int cdvdfsv_size;
@@ -34,13 +38,16 @@ int cdvdfsv_sectors;
 static SifRpcDataQueue_t rpc0_DQ;
 static SifRpcDataQueue_t rpc1_DQ;
 static SifRpcDataQueue_t rpc2_DQ;
+static SifRpcDataQueue_t rpc_sd_DQ;
 static SifRpcServerData_t cdinit_rpcSD, cddiskready_rpcSD, cddiskready2_rpcSD;
 static SifRpcServerData_t S596_rpcSD;
+static SifRpcServerData_t shutdown_rpcSD;
 
 static u8 cdinit_rpcbuf[16];
 static u8 cddiskready_rpcbuf[16];
 static u8 cddiskready2_rpcbuf[16];
 static u8 S596_rpcbuf[16];
+static u8 shutdown_rpcbuf[16];
 
 static int rpc0_thread_id, rpc1_thread_id, rpc2_thread_id, rpc_sd_thread_id;
 
@@ -143,11 +150,18 @@ static void init_thread(void *args)
     cdvdfsv_sectors = cdvdfsv_size / 2048;
     cdvdfsv_startrpcthreads();
 
-    // Simplified poffloop: block until power-off event, then exit.
-    // Original also sends SIF cmd 0x80000012 to EE before exiting.
+    // The IOP CD/DVD interrupt is the authoritative physical power-button
+    // signal. Handle it here so power-off does not depend on an EE VBlank or
+    // pad hook surviving the running game.
+    ChangeThreadPriority(GetThreadId(), 1);
     cdvdman_intr_ef = sceCdSC(CDSC_GET_INTRFLAG, &dummy);
     ClearEventFlag(cdvdman_intr_ef, ~CDVDEF_POWER_OFF);
     WaitEventFlag(cdvdman_intr_ef, CDVDEF_POWER_OFF, WEF_AND, NULL);
+
+    // Acknowledge the physical request, then finish active storage work and
+    // ask the Mechacon to switch off, matching the normal console behavior.
+    CDVDreg_PWOFF = CDL_DATA_END;
+    shutdown_services(1);
 
     ExitDeleteThread();
 }
@@ -185,6 +199,16 @@ static void cdvdfsv_startrpcthreads(void)
 
     rpc0_thread_id = CreateThread(&thread_param);
     StartThread(rpc0_thread_id, NULL);
+
+    // LUNA/OPL-compatible safe shutdown RPC used before in-game return.
+    thread_param.attr = TH_C;
+    thread_param.option = 0xABCD8003;
+    thread_param.thread = (void *)cdvdfsv_rpc_sd_th;
+    thread_param.stacksize = 0x800;
+    thread_param.priority = 0x1;
+
+    rpc_sd_thread_id = CreateThread(&thread_param);
+    StartThread(rpc_sd_thread_id, NULL);
 }
 
 //-------------------------------------------------------------------------
@@ -232,6 +256,54 @@ static void cdvdfsv_rpc2_th(void *args)
     cdvdfsv_register_searchfile_rpc(&rpc2_DQ);
 
     sceSifRpcLoop(&rpc2_DQ);
+}
+
+//-------------------------------------------------------------------------
+// OPL-compatible shutdown endpoint. Stop outstanding reads before IGR, but
+// keep DEV9 powered so the launcher can initialize the same HDD after return.
+static void cdvdfsv_rpc_sd_th(void *args)
+{
+    sceSifSetRpcQueue(&rpc_sd_DQ, GetThreadId());
+    sceSifRegisterRpc(&shutdown_rpcSD, 0x80000598, &cbrpc_shutdown, shutdown_rpcbuf, NULL, NULL, &rpc_sd_DQ);
+    sceSifRpcLoop(&rpc_sd_DQ);
+}
+
+static void *cbrpc_shutdown(int fno, void *buf, int size)
+{
+    int result = 0;
+    int poweroff = *(int *)buf;
+
+    if (fno == 1)
+        result = shutdown_services(poweroff);
+
+    *(int *)buf = result;
+    return buf;
+}
+
+static int shutdown_services(int poweroff)
+{
+    iop_library_t *dev9;
+
+    // Finish any outstanding emulated optical read before stopping DEV9.
+    sceCdBreak();
+    sceCdSync(0);
+
+    if (poweroff) {
+        u32 stat;
+
+        // Only a real power-off may disable DEV9. Doing this during IGR can
+        // leave a physical HDD or SATA bridge unavailable after the IOP reset.
+        dev9 = ioplib_getByName("dev9\0\0\0\0");
+        if (dev9 != NULL && dev9->exports[6] != NULL) {
+            void (*shutdown)(void) = dev9->exports[6];
+            shutdown();
+        }
+
+        // Power-off must also work without DEV9 (USB and other backends).
+        sceCdPowerOff(&stat);
+    }
+
+    return 1;
 }
 
 //-------------------------------------------------------------------------

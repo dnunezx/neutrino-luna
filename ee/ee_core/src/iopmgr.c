@@ -1,3 +1,4 @@
+// LUNA modifications: Danny Nunez (dnunezx) 2026
 // libc/newlib
 #include <string.h>
 
@@ -27,6 +28,10 @@ static int (*Old_SifGetReg)(u32 register_num);
 
 // Used by Hook_SifSetDma in asm.S
 u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
+
+// Used by the IGR pad-hook reinstallation paths in asm.S
+int (*Old_ExecPS2)(void *entry, void *gp, int num_args, char *args[]);
+int (*Old_CreateThread)(void *thread_param);
 
 int _SifExecModuleBuffer(const void *ptr, u32 size, u32 arg_len, const char *args, int *mod_res, int dontwait);
 
@@ -107,7 +112,7 @@ static void print_iop_args(int arg_len, const char *args)
 
 //---------------------------------------------------------------------------
 // Reset IOP. This function replaces SifIopReset from the PS2SDK
-static int Reset_Iop(const char *arg, int mode)
+int Reset_Iop(const char *arg, int mode)
 {
     static SifCmdResetData_t reset_pkt __attribute__((aligned(64)));
     struct t_SifDmaTransfer dmat;
@@ -466,4 +471,34 @@ void Install_Kernel_Hooks(void)
 
     Old_SifGetReg = GetSyscallHandler(__NR_SifGetReg);
     SetSyscall(__NR_SifGetReg, &Hook_SifGetReg);
+
+    // Keep the pad hook alive when games reload their EE code or create the
+    // low-priority IOP-management threads that initialize libpad.
+    if ((eec.flags & EECORE_FLAG_IGR) && !(eec.flags & EECORE_FLAG_UNHOOK)) {
+        Old_CreateThread = GetSyscallHandler(__NR_CreateThread);
+        SetSyscall(__NR_CreateThread, &Hook_CreateThread);
+
+        Old_ExecPS2 = GetSyscallHandler(__NR__ExecPS2);
+        SetSyscall(__NR__ExecPS2, &Hook_ExecPS2);
+    }
+}
+
+void Remove_Kernel_Hooks(void)
+{
+    if (Old_SifSetDma != NULL)
+        SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+    if (Old_SifSetReg != NULL)
+        SetSyscall(__NR_SifSetReg, Old_SifSetReg);
+    if (Old_SifGetReg != NULL)
+        SetSyscall(__NR_SifGetReg, Old_SifGetReg);
+
+    if ((eec.flags & EECORE_FLAG_IGR) && !(eec.flags & EECORE_FLAG_UNHOOK)) {
+        if (Old_CreateThread != NULL)
+            SetSyscall(__NR_CreateThread, Old_CreateThread);
+        if (Old_ExecPS2 != NULL)
+            SetSyscall(__NR__ExecPS2, Old_ExecPS2);
+    }
+
+    FlushCache(WRITEBACK_DCACHE);
+    FlushCache(INVALIDATE_ICACHE);
 }

@@ -1,3 +1,4 @@
+// LUNA modifications: Danny Nunez (dnunezx) 2026
 #ifndef IOPMGR_H
 #define IOPMGR_H
 
@@ -9,6 +10,8 @@ void New_Reset_Iop(const char *arg, int arglen);
 void New_Reset_Iop2(const char *arg, int arglen, int eeload);
 
 void Install_Kernel_Hooks(void);
+void Remove_Kernel_Hooks(void);
+int Reset_Iop(const char *arg, int mode);
 
 
 #endif

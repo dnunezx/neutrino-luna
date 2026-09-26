@@ -1,3 +1,4 @@
+// LUNA modifications: Danny Nunez (dnunezx) 2026
 #ifndef EECORE_CONFIG_H
 #define EECORE_CONFIG_H
 
@@ -29,6 +30,10 @@ typedef struct
 #define EECORE_FLAG_GSM_NO_576P (1<<2) // GSM: BIOS < 2.10 = no 576p support
 #define EECORE_FLAG_LOGO_PATCH  (1<<3) // PS2LOGO: apply region patch (console region ≠ game region)
 #define EECORE_FLAG_LOGO_PAL    (1<<4) // PS2LOGO: force PAL mode (only meaningful if LOGO_PATCH set)
+#define EECORE_FLAG_IGR          (1<<5) // LUNA: enable direct in-game return
+
+#define EECORE_EXIT_PATH_MAX 128
+#define EECORE_EXIT_HDD_CHAIN "hdd"
 
 enum EECORE_GSM_VMODE
 {
@@ -63,6 +68,8 @@ struct ee_core_data
     enum EECORE_GSM_COMP_MODE GsmCompMode;
 
     int *CheatList;
+
+    char ExitPath[EECORE_EXIT_PATH_MAX];
 
     void *ModStorageStart;
     void *ModStorageEnd;
