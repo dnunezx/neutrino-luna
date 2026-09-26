@@ -1,7 +1,7 @@
 /*
   LUNA direct in-game return.
 
-  LUNA modifications: Danny Nunez (dnunezx) 2026
+  LUNA 2026
 
   Pad discovery and hook code is adapted from Open PS2 Loader's padhook.c.
   Copyright 2009-2010 Ifcaro, jimmikaelkael and Polo.

@@ -1,4 +1,4 @@
-// LUNA modifications: Danny Nunez (dnunezx) 2026
+// LUNA 2026
 #ifndef CONFIG_H
 #define CONFIG_H
 

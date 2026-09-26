@@ -1,7 +1,7 @@
 /*
   Copyright 2009-2010, Ifcaro, jimmikaelkael & Polo
   Copyright 2006-2008 Polo
-  LUNA modifications: Danny Nunez (dnunezx) 2026
+  LUNA 2026
   Licenced under Academic Free License version 3.0
   Review Open-Ps2-Loader README & LICENSE files for further details.
 

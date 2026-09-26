@@ -1,6 +1,6 @@
 /*
   Copyright 2009, jimmikaelkael
-  LUNA modifications: Danny Nunez (dnunezx) 2026
+  LUNA 2026
   Licenced under Academic Free License version 3.0
   Review open-ps2-loader README & LICENSE files for further details.
 */

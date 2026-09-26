@@ -2,7 +2,7 @@
 # Copyright 2006-2008 Polo
 # Licenced under Academic Free License version 3.0
 # Review OPNPS2LD README & LICENSE files for further details.
-# LUNA modifications: Danny Nunez (dnunezx) 2026
+# LUNA 2026
 #
 # Copyright 2001-2004, ps2dev - http://www.ps2dev.org
 # Licenced under Academic Free License version 2.0
