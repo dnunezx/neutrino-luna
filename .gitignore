@@ -26,3 +26,7 @@ releases/
 !.github
 
 CLAUDE.md
+/BUILDING.md
+/FMCB.md
+/NHDDL_FIDELITY.md
+/build-luna-emulator.sh
