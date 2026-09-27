@@ -15,6 +15,7 @@
 #include <sbv_patches.h>
 #include <sifrpc.h>
 #include <tamtypes.h>
+#include <string.h>
 
 #include "asm.h"
 #include "cheat_api.h"
@@ -47,6 +48,11 @@ static u8 IGR_Stack[IGR_STACK_SIZE] __attribute__((aligned(16)));
 
 extern void *_gp;
 extern void *_stack_end;
+extern int _iop_reboot_count;
+extern u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
+extern int (*Old_SifSetReg)(u32 register_num, int register_value);
+
+static SifCmdResetData_t IGR_Reset_Packet __attribute__((aligned(64)));
 
 void DisableGSM(void);
 
@@ -98,14 +104,16 @@ static void luna_return_home(void)
     FlushCache(WRITEBACK_DCACHE);
     FlushCache(INVALIDATE_ICACHE);
 
-    if (SifLoadElf(argv[0], &elf) == 0) {
+    elf.epc = 0;
+    elf.gp = 0;
+    if (SifLoadElf(argv[0], &elf) == 0 && elf.epc != 0) {
         SifExitIopHeap();
         SifLoadFileExit();
         SifExitRpc();
 
         FlushCache(WRITEBACK_DCACHE);
         FlushCache(INVALIDATE_ICACHE);
-        ExecPS2((void *)elf.epc, (void *)elf.gp, 1, argv);
+        CleanExecPS2((void *)elf.epc, (void *)elf.gp, 1, argv);
     }
 
     luna_igr_fail();
@@ -115,26 +123,53 @@ static void IGR_Thread(void *arg)
 {
     u32 cop0_perf;
     int poweroff;
+    struct t_SifDmaTransfer reset_dma;
 
     (void)arg;
     SleepThread();
 
-    SifInitRpc(0);
-
     poweroff = (Pad_Data.combo_type == IGR_COMBO_R3_L3);
 
-    // Fail closed if the IOP cannot finish optical reads before the reset.
-    // DEV9 stays powered for IGR and is shut down only for physical power-off.
-    if (lunaIGRShutdown(poweroff) < 0)
-        luna_igr_fail();
-
-    // A stock power-button press powers the console off. If the command was
-    // accepted but the hardware is still running, do not turn it into an IGR.
-    if (poweroff)
+    // A physical power-button press still uses the IOP shutdown endpoint.
+    // Never turn an accepted power-off request into a dashboard return.
+    if (poweroff) {
+        SifInitRpc(0);
+        if (lunaIGRShutdown(1) < 0)
+            luna_igr_fail();
         SleepThread();
-
-    while (!Reset_Iop("", 0)) {
     }
+
+    // The shutdown RPC followed by Reset_Iop (which stops SIF DMA) can leave
+    // the game on a black screen. PR #213 resets the IOP directly from this
+    // resident worker, leaving SIF0 active and using the saved kernel handlers.
+    delay(250);
+    _iop_reboot_count++;
+    memset(&IGR_Reset_Packet, 0, sizeof(IGR_Reset_Packet));
+    IGR_Reset_Packet.header.psize = sizeof(IGR_Reset_Packet);
+    IGR_Reset_Packet.header.cid = SIF_CMD_RESET_CMD;
+    reset_dma.src = &IGR_Reset_Packet;
+    reset_dma.dest = (void *)SifGetReg(SIF_SYSREG_SUBADDR);
+    reset_dma.size = sizeof(IGR_Reset_Packet);
+    reset_dma.attr = SIF_DMA_ERT | SIF_DMA_INT_O;
+    SifWriteBackDCache(&IGR_Reset_Packet, sizeof(IGR_Reset_Packet));
+
+    DIntr();
+    ee_kmode_enter();
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
+    while (!Old_SifSetDma(&reset_dma, 1)) {
+        ee_kmode_exit();
+        EIntr();
+        delay(1);
+        DIntr();
+        ee_kmode_enter();
+        Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_BOOTEND);
+    }
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_SIFINIT);
+    Old_SifSetReg(SIF_REG_SMFLAG, SIF_STAT_CMDINIT);
+    Old_SifSetReg(SIF_SYSREG_RPCINIT, 0);
+    Old_SifSetReg(SIF_SYSREG_SUBADDR, (int)NULL);
+    ee_kmode_exit();
+    EIntr();
 
     Remove_Kernel_Hooks();
     InitializeTLB();

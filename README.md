@@ -180,6 +180,13 @@ Usage examples:
   neutrino.elf -bsd=udpbd -bsdfs=bd -dvd=bdfs:udp0p0
 ```
 
+For PCSX2 HostFS testing with `-igr=host:/luna.elf`, build the loader from the
+Neutrino root with `make -B -C ee/loader LUNA_EMULATOR_HOST_IGR=1`. The `-B`
+matters when switching build flags: without it, Make may reuse a hardware
+loader that rejects `host:` and returns to the PS2 browser. Copy the resulting
+`ee/loader/neutrino.elf` to the emulator runtime only. Rebuild without the flag
+for hardware packages, which use `hdd`, `mc0:`, or `mc1:` return targets.
+
 ## UDPFS / UDPBD PC Server
 
 The `pc/udpfs_server.py` script serves files and/or block devices to the PS2 over UDP (Ethernet).

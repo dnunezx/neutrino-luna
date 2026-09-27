@@ -23,7 +23,8 @@ static int set_reg_hook = 0;
 static int get_reg_hook = 0;
 static int imgdrv_offset = 0;
 static void (*Direct_SetSyscall)(s32 syscall_num, void *handler);
-static int (*Old_SifSetReg)(u32 register_num, int register_value);
+// The resident IGR worker uses the original syscall handlers for its raw reset.
+int (*Old_SifSetReg)(u32 register_num, int register_value);
 static int (*Old_SifGetReg)(u32 register_num);
 
 // Used by Hook_SifSetDma in asm.S
