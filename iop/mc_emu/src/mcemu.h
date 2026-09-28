@@ -21,6 +21,7 @@
 #include <dmacman.h>
 
 #include "fhi.h"
+#include "mcemu_config.h"
 #include "mprintf.h"
 
 #define MODNAME "mcemu"
@@ -55,22 +56,6 @@ typedef struct _Sio2Packet
     u32 rdwords;
     u32 rdcount;
 } Sio2Packet;
-
-/* Memory Card Spec (do not change this structure) */
-typedef struct _McSpec
-{
-    u16 PageSize;  /* Page size in bytes (user data only) */
-    u16 BlockSize; /* Block size in pages */
-    u32 CardSize;  /* Total number of pages */
-} McSpec;
-
-/* Virtual Memory Card Image File Spec */
-typedef struct _McImageSpec
-{
-    int active; /* Activation flag */
-    int flags;    /* Memory Card Flags */
-    McSpec cspec; /* Memory Card Spec */
-} McImageSpec;
 
 /* Descriptor for a virtual memory card */
 typedef struct _MemoryCard
@@ -148,12 +133,11 @@ void CalculateECC(u8 *buf, void *chk);
 
 /* mcemu_var.c */
 
-#define MCEMU_PORTS 2
-
 extern const u8 xortable[256];
 
 extern PtrSecrAuthCard pSecrAuthCard[MCEMU_PORTS];
-extern McImageSpec vmcSpec[MCEMU_PORTS];
+extern struct mcemu_settings mcemuSettings;
+#define vmcSpec mcemuSettings.card
 extern MemoryCard memcards[MCEMU_PORTS];
 extern void *pFastBuf;
 

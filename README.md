@@ -120,6 +120,9 @@ Options:
                     - <file>
   -mc1=<mode>       See -mc0=<mode>
 
+                    LUNA validates raw OPL-style 8/16/32/64 MiB card images
+                    and configures the selected slot from the image geometry.
+
   -elf=<file>       ELF file to boot, supported are:
                     - auto (elf file from cd/dvd) (default)
                     - <file>

@@ -29,6 +29,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 
 // Neutrino EE loader
 #include "fhi_config.h"
+#include "vmc_image.h"
 #include "modlist.h"
 #include "config.h"
 
@@ -767,6 +768,12 @@ int main(int argc, char *argv[])
     if (set_fakemod != NULL)
         memset((void *)set_fakemod, 0, sizeof(struct fakemod_data));
 
+    struct mcemu_settings *set_mcemu = module_get_settings(modlist_get_by_name(&drv.mod, "mc_emu.irx"));
+    if (!strcmp(sMCMode, "file") && set_mcemu == NULL) {
+        printf("ERROR: memory card emulator settings not found\n");
+        return -1;
+    }
+
     // QuickBoot requires certain IOP modules to be loaded before starting Neutrino
     if (sys.bQuickBoot == 1) {
         if (fhi_active) {
@@ -912,6 +919,10 @@ int main(int argc, char *argv[])
      * Enable MC0 emulation
      */
     if (sys.sMC0File != NULL) {
+        if (vmc_image_inspect(sys.sMC0File, &set_mcemu->card[0]) < 0) {
+            printf("ERROR: invalid or unsupported MC0 image: %s\n", sys.sMC0File);
+            return -1;
+        }
         if (fhi_add_file(FHI_FID_MC0, sys.sMC0File, O_RDWR) < 0)
             return -1;
     }
@@ -920,6 +931,10 @@ int main(int argc, char *argv[])
      * Enable MC1 emulation
      */
     if (sys.sMC1File != NULL) {
+        if (vmc_image_inspect(sys.sMC1File, &set_mcemu->card[1]) < 0) {
+            printf("ERROR: invalid or unsupported MC1 image: %s\n", sys.sMC1File);
+            return -1;
+        }
         if (fhi_add_file(FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
             return -1;
     }
