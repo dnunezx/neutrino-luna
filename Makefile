@@ -94,6 +94,7 @@ copy:
 	cp $(PS2SDK)/iop/irx/bdmfs_fatfs.irx       ee/loader/modules
 	cp $(PS2SDK)/iop/irx/ata_bd.irx            ee/loader/modules
 	cp $(PS2SDK)/iop/irx/ps2hdd-bdm.irx        ee/loader/modules
+	cp $(PS2SDK)/iop/irx/ps2fs.irx             ee/loader/modules
 	cp $(PS2SDK)/iop/irx/usbd_mini.irx         ee/loader/modules
 	cp $(PS2SDK)/iop/irx/usbmass_bd_mini.irx   ee/loader/modules
 	cp $(PS2SDK)/iop/irx/mx4sio_bd_mini.irx    ee/loader/modules

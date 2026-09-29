@@ -21,4 +21,7 @@ int fhi_add_file_fd(int fhi_fid, int fd, const char *path);
 // Returns 0 on success, -1 on error.
 int fhi_add_file(int fhi_fid, const char *path, int flags);
 
+// Map a PFS VMC into the ATA block-device backend before the game IOP reboot.
+int fhi_add_pfs_vmc(int fhi_fid, const char *path, const char *partition);
+
 #endif

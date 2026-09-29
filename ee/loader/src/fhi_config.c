@@ -18,6 +18,7 @@ _off64_t lseek64(int __filedes, _off64_t __offset, int __whence); // should be i
 #include "../../../common/include/fhi_fileid_config.h"
 
 #include "fhi_config.h"
+#include "pfs_vmc.h"
 #include "modlist.h"
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,14 @@ int fhi_add_file(int fhi_fid, const char *path, int flags)
     if (!g_ops->keep_open)
         close(fd);
     return rv;
+}
+
+int fhi_add_pfs_vmc(int fhi_fid, const char *path, const char *partition)
+{
+    if (g_bd == NULL || g_ops != &ops_bd ||
+        memcmp(&g_bd->drvName, "ata", 3) != 0 || g_bd->devNr != 0)
+        return -1;
+    return pfs_vmc_map_file(path, partition, g_bd, fhi_fid);
 }
 
 // ---------------------------------------------------------------------------

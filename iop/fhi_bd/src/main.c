@@ -104,6 +104,9 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
         return -1;
 
     ff = &fhi.file[file_handle];
+    if (ff->frag_count == 0 || sector_start > ff->size / 512 ||
+        sector_count > ff->size / 512 - sector_start)
+        return -1;
     WaitSema(bdm_io_sema);
     rv = bd_defrag_write(g_bd, ff->frag_count, &fhi.frags[ff->frag_start], sector_start, buffer, sector_count);
     SignalSema(bdm_io_sema);

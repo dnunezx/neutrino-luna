@@ -12,6 +12,10 @@ env = ["LE"]
 [[module]]
 file = "hdlfs.irx"
 env = ["LE"]
+[[module]]
+file = "ps2fs.irx"
+args = ["-o", "10", "-n", "40"]
+env = ["LE"]
 
 # Modules to load in emulation environment
 [[module]]

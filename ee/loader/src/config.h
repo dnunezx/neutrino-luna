@@ -26,6 +26,7 @@ struct SSystemSettings {
     char *sATA1File;
     char *sMC0File;
     char *sMC1File;
+    char *sPFSPartition;
     char *sELFFile;
     char *sGC;
     char *sGSM;

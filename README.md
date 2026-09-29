@@ -257,3 +257,19 @@ Loader | Author
 [Modulo](https://github.com/AdityaKumar7209/Modulo-R1-Beta-Preview---PS2) | AdityaKumar7209
 
 Add your project here? Send me a PR.
+
+## APA/PFS virtual memory cards
+
+With `-bsd=ata -bsdfs=hdl`, an existing card file on the mounted APA/PFS
+metadata partition can be passed as `-mc0=pfs0:/VMC/card.bin` (or `-mc1=`)
+along with `-pfs=hdd0:+OPL` (substitute the actual partition name). Normal
+boot is required; quick boot does not load the PFS driver. Build and copy the
+modules so `ps2fs.irx` and the current `fhi_bd.irx` are present beside
+Neutrino's other modules.
+
+The loader accepts only 8 KiB PFS zones and card files whose direct extents
+fit the shared 64-fragment table. It validates the APA header, PFS inode,
+file length, extent bounds, and sampled data before enabling sector writes.
+Other PFS zone sizes and files requiring indirect inode segments are rejected.
+An APA/PFS save and reload test is still required before relying on this for
+irreplaceable saves.

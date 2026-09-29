@@ -138,6 +138,7 @@ void print_usage()
     printf("  -dbc              Enable debug colors\n");
     printf("  -logo             Enable logo (adds rom0:PS2LOGO to arguments)\n");
     printf("  -qb               Quick-Boot directly into load environment\n");
+    printf("  -pfs=<partition>  APA/PFS partition holding pfs0: VMC files (with -bsdfs=hdl)\n");
     printf("\n");
     printf("  --b               Break, all following parameters are passed to the ELF\n");
     printf("\n");
@@ -182,6 +183,8 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sMC0File = &argv[i][5];
         else if (!strncmp(argv[i], "-mc1=", 5))
             sys.sMC1File = &argv[i][5];
+        else if (!strncmp(argv[i], "-pfs=", 5))
+            sys.sPFSPartition = &argv[i][5];
         else if (!strncmp(argv[i], "-elf=", 5))
             sys.sELFFile = &argv[i][5];
         else if (!strncmp(argv[i], "-gc=", 4))
@@ -418,6 +421,47 @@ static uint8_t *build_irx_table(int dvd_active)
 /*
  * Main neutrino loader function
  */
+static int setup_memory_cards(struct mcemu_settings *mcemu)
+{
+    const char *cards[2] = {sys.sMC0File, sys.sMC1File};
+    int pfs = (cards[0] && !strncmp(cards[0], "pfs0:", 5)) ||
+              (cards[1] && !strncmp(cards[1], "pfs0:", 5));
+    int result = -1;
+    int i;
+
+    if (pfs) {
+        if (sys.bQuickBoot || !sys.sPFSPartition || !sys.sPFSPartition[0] ||
+            strcmp(sys.sBSDFS, "hdl") != 0 ||
+            (cards[0] && strncmp(cards[0], "pfs0:", 5)) ||
+            (cards[1] && strncmp(cards[1], "pfs0:", 5))) {
+            printf("ERROR: PFS VMC requires normal boot, -bsdfs=hdl, -pfs= and PFS cards only\n");
+            return -1;
+        }
+        if (fileXioMount("pfs0:", sys.sPFSPartition, FIO_MT_RDONLY) < 0) {
+            printf("ERROR: unable to mount PFS VMC partition %s\n", sys.sPFSPartition);
+            return -1;
+        }
+    }
+    for (i = 0; i < 2; i++) {
+        if (!cards[i])
+            continue;
+        if (vmc_image_inspect(cards[i], &mcemu->card[i]) < 0) {
+            printf("ERROR: invalid or unsupported MC%d image: %s\n", i, cards[i]);
+            goto done;
+        }
+        if ((pfs ? fhi_add_pfs_vmc(FHI_FID_MC0 + i, cards[i], sys.sPFSPartition) :
+                   fhi_add_file(FHI_FID_MC0 + i, cards[i], O_RDWR)) < 0) {
+            printf("ERROR: unable to map MC%d image: %s\n", i, cards[i]);
+            goto done;
+        }
+    }
+    result = 0;
+done:
+    if (pfs)
+        fileXioUmount("pfs0:");
+    return result;
+}
+
 int main(int argc, char *argv[])
 {
     int i, j;
@@ -915,29 +959,8 @@ int main(int argc, char *argv[])
             return -1;
     }
 
-    /*
-     * Enable MC0 emulation
-     */
-    if (sys.sMC0File != NULL) {
-        if (vmc_image_inspect(sys.sMC0File, &set_mcemu->card[0]) < 0) {
-            printf("ERROR: invalid or unsupported MC0 image: %s\n", sys.sMC0File);
-            return -1;
-        }
-        if (fhi_add_file(FHI_FID_MC0, sys.sMC0File, O_RDWR) < 0)
-            return -1;
-    }
-
-    /*
-     * Enable MC1 emulation
-     */
-    if (sys.sMC1File != NULL) {
-        if (vmc_image_inspect(sys.sMC1File, &set_mcemu->card[1]) < 0) {
-            printf("ERROR: invalid or unsupported MC1 image: %s\n", sys.sMC1File);
-            return -1;
-        }
-        if (fhi_add_file(FHI_FID_MC1, sys.sMC1File, O_RDWR) < 0)
-            return -1;
-    }
+    if (set_mcemu != NULL && setup_memory_cards(set_mcemu) < 0)
+        return -1;
 
     /*
      * PS2 Logo: determine region and whether a patch is needed.
