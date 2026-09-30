@@ -132,6 +132,7 @@ void print_usage()
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
+    printf("  -udpfs_ip=<ip>    Override the UDPFS console IPv4 address\n");
     printf("  -igr=<target>     Enable LUNA in-game return. Use hdd for the HDD boot chain,\n");
     printf("                    or provide an mc0:/mc1: ELF path for direct return\n");
     printf("\n");
@@ -193,6 +194,8 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sGSM = &argv[i][5];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
+        else if (!strncmp(argv[i], "-udpfs_ip=", 10))
+            sys.sUDPFSIP = &argv[i][10];
         else if (!strncmp(argv[i], "-igr=", 5))
             sys.sIGRPath = &argv[i][5];
         else if (!strncmp(argv[i], "-cwd=", 5))
@@ -698,6 +701,45 @@ int main(int argc, char *argv[])
         if (load_config_file("bsd", sys.sBSD) < 0) {
             printf("ERROR: driver %s failed\n", sys.sBSD);
             return -1;
+        }
+
+        // Keep LUNA's network scanner and game runtime on the same console IP.
+        if (!strcmp(sys.sBSD, "udpfs") && sys.sUDPFSIP != NULL) {
+            unsigned a, b, c, d;
+            char extra;
+            if (strlen(sys.sUDPFSIP) > 15 ||
+                sscanf(sys.sUDPFSIP, "%u.%u.%u.%u%c", &a, &b, &c, &d, &extra) != 4 ||
+                a == 0 || a >= 224 || b > 255 || c > 255 || d > 255) {
+                printf("ERROR: invalid UDPFS console IP\n");
+                return -1;
+            }
+            int found = 0;
+            for (int i = 0; i < drv.mod.count; i++) {
+                struct SModule *mod = &drv.mod.mod[i];
+                const char *base = strrchr(mod->sFileName, '/');
+                base = base ? base + 1 : mod->sFileName;
+                if (strcmp(base, "ministack.irx")) continue;
+                char *args = malloc(mod->arg_len + 20);
+                if (!args) return -1;
+                int length = snprintf(args, 20, "ip=%s", sys.sUDPFSIP) + 1;
+                for (int offset = 0; offset < mod->arg_len;) {
+                    const char *arg = mod->args + offset;
+                    int size = strlen(arg) + 1;
+                    if (strncmp(arg, "ip=", 3)) {
+                        memcpy(args + length, arg, size);
+                        length += size;
+                    }
+                    offset += size;
+                }
+                free(mod->args);
+                mod->args = args;
+                mod->arg_len = length;
+                found = 1;
+            }
+            if (!found) {
+                printf("ERROR: UDPFS config has no ministack module\n");
+                return -1;
+            }
         }
 
         // mmce and udpfs devices don't have a filesystem layer

@@ -32,6 +32,7 @@ struct SSystemSettings {
     char *sGSM;
     char *sCFGFile;
     char *sIGRPath;
+    char *sUDPFSIP;
     int bDebug;
     int bLogo;
     int bQuickBoot;
