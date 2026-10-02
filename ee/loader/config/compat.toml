@@ -109,6 +109,12 @@ MODE8 = {name = "Compat MODE8: NOP (user configurable)"}
 # Perform compatibility testing with -gc=9
 # each test run enable the next line
 MODE9 = {name = "Compat MODE9: NOP"}
+
+# Experimental physical-ATA startup test for the USA Oogie's Revenge disc.
+# Its ngycdvd driver polls sceCdSync(1). SYNC_READ completes reads before
+# returning to that caller; FAST_READ avoids the artificial read-delay alarms.
+# Physical loading-screen recovery remains unverified. Keep this title-only.
+"SLUS_208.60" = {name = "Oogie's Revenge: read completion test", cdvdman.flags = ["FAST_READ", "SYNC_READ"]}
 #MODE9 = {name = "!!! TEST-01 !!!", eecore.irm = [3, 4, 0]}
 #MODE9 = {name = "!!! TEST-02 !!!", cdvdman.flags = ["SYNC_READ"]}
 #MODE9 = {name = "!!! TEST-06 !!!"}
