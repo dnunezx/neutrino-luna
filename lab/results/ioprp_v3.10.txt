@@ -1,0 +1,86 @@
+[MEMMAP_BEGIN: v3.10]
+[MEMMAP]   start    end      size      type   owner
+[MEMMAP]   -------------------------------------------------------
+[MEMMAP]   0x00000  0x01a00     6656B  img    System_Memory_M
+[MEMMAP]   0x01a00  0x01b00      256B  heap   ?
+[MEMMAP]   0x01b00  0x03b00     8192B  img    Module_Manager
+[MEMMAP]   0x03b00  0x04300     2048B  img    Exception_Manag
+[MEMMAP]   0x04300  0x04400      256B  heap   ?
+[MEMMAP]   0x04400  0x06300     7936B  img    Interrupt_Manag
+[MEMMAP]   0x06300  0x06700     1024B  img    ssbus_service
+[MEMMAP]   0x06700  0x08400     7424B  img    dmacman
+[MEMMAP]   0x08400  0x09500     4352B  img    Timer_Manager
+[MEMMAP]   0x09500  0x0b100     7168B  img    System_C_lib
+[MEMMAP]   0x0b100  0x0ba00     2304B  img    Heap_lib
+[MEMMAP]   0x0ba00  0x13000    30208B  img    Multi_Thread_Ma
+[MEMMAP]   0x13000  0x13800     2048B  heap   ?
+[MEMMAP]   0x13800  0x14200     2560B  img    Vblank_service
+[MEMMAP]   0x14200  0x16600     9216B  img    IO/File_Manager
+[MEMMAP]   0x16600  0x19e00    14336B  img    Moldule_File_lo
+[MEMMAP]   0x19e00  0x1a900     2816B  img    ROM_file_driver
+[MEMMAP]   0x1a900  0x1b100     2048B  img    Stdio
+[MEMMAP]   0x1b100  0x1ca00     6400B  img    IOP_SIF_manager
+[MEMMAP]   0x1ca00  0x20300    14592B  img    IOP_SIF_rpc_int
+[MEMMAP]   0x20300  0x20800     1280B  img    RebootByEE
+[MEMMAP]   0x20800  0x20900      256B  heap   ?
+[MEMMAP]   0x20900  0x22900     8192B  img    LoadModuleByEE
+[MEMMAP]   0x22900  0x3da00   110848B  img    cdvd_driver
+[MEMMAP]   0x3da00  0x3e200     2048B  heap   ?
+[MEMMAP]   0x3e200  0x44b00    26880B  img    cdvd_ee_driver
+[MEMMAP]   0x44b00  0x48e00    17152B  img    FILEIO_service
+[MEMMAP]   0x48e00  0x4c200    13312B  img    secrman_for_cex
+[MEMMAP]   0x4c200  0x4c500      768B  img    SyncEE
+[MEMMAP]   0x4c500  0x4c600      256B  heap   ?
+[MEMMAP]   0x4c600  0x51300    19712B  img    cdvd_st_driver
+[MEMMAP]   0x51300  0x51800     1280B  img    memmap
+[MEMMAP]   0x51800  0x1f6400  1723392B  free
+[MEMMAP]   0x1f6400  0x1f6c00     2048B  heap   ?
+[MEMMAP]   0x1f6c00  0x1f7400     2048B  heap   ?
+[MEMMAP]   0x1f7400  0x1f8d00     6400B  heap   ?
+[MEMMAP]   0x1f8d00  0x1fa600     6400B  heap   ?
+[MEMMAP]   0x1fa600  0x1fae00     2048B  heap   ?
+[MEMMAP]   0x1fae00  0x1fbe00     4096B  heap   ?
+[MEMMAP]   0x1fbe00  0x1fc600     2048B  heap   ?
+[MEMMAP]   0x1fc600  0x1fd600     4096B  heap   ?
+[MEMMAP]   0x1fd600  0x1fde00     2048B  heap   ?
+[MEMMAP]   0x1fde00  0x1fee00     4096B  heap   ?
+[MEMMAP]   0x1fee00  0x1ff000      512B  heap   ?
+[MEMMAP]   0x1ff000  0x1ff100      256B  heap   ?
+[MEMMAP]   0x1ff100  0x200000     3840B  heap   ?
+[MEMMAP]   -------------------------------------------------------
+[MEMMAP]   used=373760B (365KiB, 45 blocks)  free=1723392B (1683KiB, 1 blocks)
+[MEMMAP_END: v3.10]
+
+[MODULES]
+  txtst   | txtsz   | dtasz   | bsssz   | ver    | name
+  ------------------------------------------------------------
+  0x00830 |   4208b |     80b |     32b | 0x0203 | System_Memory_Manage
+  0x01b30 |   7968b |     48b |    116b | 0x0206 | Module_Manager
+  0x03b30 |   1744b |     48b |     80b | 0x0101 | Exception_Manager
+  0x04430 |   5488b |    128b |   2064b | 0x0101 | Interrupt_Manager
+  0x06330 |    800b |    128b |      0b | 0x0101 | ssbus_service
+  0x06730 |   5584b |   1648b |      0b | 0x0101 | dmacman
+  0x08430 |   3776b |    384b |      0b | 0x0202 | Timer_Manager
+  0x09530 |   6272b |    752b |      0b | 0x0203 | System_C_lib
+  0x0b130 |   2176b |     32b |      0b | 0x0101 | Heap_lib
+  0x0ba30 |  27792b |   1008b |   1236b | 0x0203 | Multi_Thread_Manager
+  0x13830 |   2000b |     32b |    352b | 0x0101 | Vblank_service
+  0x14230 |   7776b |    496b |    656b | 0x0203 | IO/File_Manager
+  0x16630 |  13200b |    960b |     36b | 0x0209 | Moldule_File_loader
+  0x19e30 |   2128b |    192b |    208b | 0x0201 | ROM_file_driver
+  0x1a930 |   1856b |     80b |     16b | 0x0203 | Stdio
+  0x1b130 |   4336b |    192b |   1600b | 0x0205 | IOP_SIF_manager
+  0x1ca30 |   7312b |    128b |   6960b | 0x0208 | IOP_SIF_rpc_interfac
+  0x20330 |    848b |    160b |     96b | 0x0101 | RebootByEE
+  0x20930 |   6752b |    688b |    668b | 0x0202 | LoadModuleByEE
+  0x22930 |  50464b |   6016b |  54320b | 0x0226 | cdvd_driver
+  0x3e230 |  19872b |   2016b |   4704b | 0x0226 | cdvd_ee_driver
+  0x44b30 |  11904b |   1136b |   3984b | 0x0212 | FILEIO_service
+  0x48e30 |  11616b |   1424b |     44b | 0x0103 | secrman_for_cex
+  0x4c230 |    640b |     48b |      0b | 0x0202 | SyncEE
+  0x4c630 |  17024b |   1264b |   1168b | 0x0202 | cdvd_st_driver
+  ------------------------------------------------------------
+  txt_total: 223536b  dta_total: 19088b  bss_total: 78340b
+  grand_total: 320964b (313KiB)
+  [FREE_MEM_ESTIMATE] top_used=0x51230 free_start=0x51300 free_size=1764608b (1723KiB)
+[/MODULES]

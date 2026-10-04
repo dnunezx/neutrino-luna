@@ -7,9 +7,7 @@
 #include "smap.h"
 #include "ministack_eth.h"
 #include "ministack_ip.h"
-#ifdef LOCAL_UDPTTY
 #include "udptty.h"
-#endif
 
 IRX_ID(MODNAME, 0x1, 0x0);
 
@@ -58,9 +56,7 @@ int _start(int argc, char *argv[])
         }
     }
 
-#ifdef LOCAL_UDPTTY
     udptty_init();
-#endif
 
     if (RegisterLibraryEntries(&_exp_mstack) != 0) {
         M_DEBUG("module already loaded\n");

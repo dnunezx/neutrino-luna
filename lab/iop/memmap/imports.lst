@@ -1,0 +1,15 @@
+loadcore_IMPORTS_start
+I_GetLoadcoreInternalData
+loadcore_IMPORTS_end
+
+sysmem_IMPORTS_start
+I_GetSysmemInternalData
+sysmem_IMPORTS_end
+
+stdio_IMPORTS_start
+I_printf
+stdio_IMPORTS_end
+
+sysclib_IMPORTS_start
+I_strncpy
+sysclib_IMPORTS_end
