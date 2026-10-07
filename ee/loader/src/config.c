@@ -8,6 +8,7 @@
 #include "../../ee_core/include/cheat_engine.h"
 
 #include "config.h"
+#include "cheat_list.h"
 
 /*
  * Global runtime state — populated by config files and command-line args.
@@ -240,6 +241,45 @@ int fakelist_add_array(struct SFakeList *fl, toml_datum_t t)
  * Sub-section config loaders
  *---------------------------------------------------------------------------*/
 
+int config_append_cheats(const uint32_t *words, int count)
+{
+    if (count < 0 || count > MAX_CHEATLIST - sys.cheats_count) {
+        printf("ERROR: combined cheat list is too large\n");
+        return -1;
+    }
+    uint32_t combined[MAX_CHEATLIST];
+    if (sys.cheats_count)
+        memcpy(combined, sys.cheats, sys.cheats_count * sizeof(uint32_t));
+    if (count)
+        memcpy(combined + sys.cheats_count, words, count * sizeof(uint32_t));
+    int total = sys.cheats_count + count;
+    if (!cheat_instructions_valid(combined, total)) {
+        printf("ERROR: invalid cheats or more than %d hooks / %d code lines\n", MAX_HOOKS, MAX_CODES);
+        return -1;
+    }
+    if (!total) return 0;
+    int *replacement = realloc(sys.cheats, total * sizeof(uint32_t));
+    if (replacement == NULL) {
+        printf("ERROR: could not allocate cheat list\n");
+        return -1;
+    }
+    memcpy(replacement, combined, total * sizeof(uint32_t));
+    sys.cheats = replacement;
+    sys.cheats_count = total;
+    return 0;
+}
+
+int config_load_cheat_payload(const char *payload)
+{
+    uint32_t words[MAX_CHEATLIST];
+    size_t count;
+    if (cheat_payload_decode(payload, words, &count)) {
+        printf("ERROR: invalid -cheats payload (expected version 1 raw pairs)\n");
+        return -1;
+    }
+    return config_append_cheats(words, (int)count);
+}
+
 int load_config_eecore(toml_datum_t t)
 {
     toml_datum_t arr;
@@ -272,21 +312,17 @@ int load_config_eecore(toml_datum_t t)
     }
 
     arr = toml_get(t, "cheats");
-    if (arr.type == TOML_ARRAY && arr.u.arr.size > 0 && (arr.u.arr.size % 2) == 0) {
-        int i;
-        int old = sys.cheats_count;
-        int add = arr.u.arr.size;
-        if (old + add <= MAX_CHEATLIST) {
-            sys.cheats = realloc(sys.cheats, (old + add) * sizeof(int));
-            for (i = 0; i < add; i++) {
-                v = arr.u.arr.elem[i];
-                if (v.type == TOML_INT64)
-                    sys.cheats[old + i] = (int)v.u.int64;
-            }
-            sys.cheats_count = old + add;
-        } else {
-            printf("WARNING: too many cheats, ignoring (max %d entries)\n", MAX_CHEATLIST);
+    if (arr.type != TOML_UNKNOWN) {
+        if (arr.type != TOML_ARRAY || (arr.u.arr.size % 2) || arr.u.arr.size > MAX_CHEATLIST)
+            return -1;
+        uint32_t words[MAX_CHEATLIST];
+        for (int i = 0; i < arr.u.arr.size; i++) {
+            v = arr.u.arr.elem[i];
+            if (v.type != TOML_INT64 || v.u.int64 < 0 || (uint64_t)v.u.int64 > UINT32_MAX)
+                return -1;
+            words[i] = (uint32_t)v.u.int64;
         }
+        if (config_append_cheats(words, arr.u.arr.size) < 0) return -1;
     }
 
     return 0;
@@ -378,7 +414,7 @@ int load_config(toml_datum_t t)
     toml_bool_in_overwrite  (t, "default_dbc",    &sys.bDebug);
     toml_bool_in_overwrite  (t, "default_logo",   &sys.bLogo);
 
-    load_config_eecore (toml_get(t, "eecore"));
+    if (load_config_eecore(toml_get(t, "eecore")) < 0) return -1;
     load_config_cdvdman(toml_get(t, "cdvdman"));
 
     if (modlist_add_array(&drv.mod, t) < 0)

@@ -31,6 +31,7 @@ struct SSystemSettings {
     char *sGC;
     char *sGSM;
     char *sCFGFile;
+    char *sCheatPayload;
     char *sIGRPath;
     char *sUDPFSIP;
     int bDebug;
@@ -84,6 +85,8 @@ int fakelist_add_array(struct SFakeList *fl, toml_datum_t t);
 
 // Config loaders — populate sys and drv from TOML data
 int load_config_eecore(toml_datum_t t);
+int config_append_cheats(const uint32_t *words, int count);
+int config_load_cheat_payload(const char *payload);
 int load_config_cdvdman(toml_datum_t t);
 int load_config(toml_datum_t t);
 

@@ -132,6 +132,7 @@ void print_usage()
     printf("  -cwd=<path>       Change working directory\n");
     printf("\n");
     printf("  -cfg=<file>       Load extra user/game specific config file (without .toml extension)\n");
+    printf("  -cheats=1:<hex>   Apply selected raw PS2RD pairs (LUNA cheat payload v1)\n");
     printf("  -udpfs_ip=<ip>    Override the UDPFS console IPv4 address\n");
     printf("  -igr=<target>     Enable LUNA in-game return. Use hdd for the HDD boot chain,\n");
     printf("                    or provide an mc0:/mc1: ELF path for direct return\n");
@@ -194,6 +195,8 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sGSM = &argv[i][5];
         else if (!strncmp(argv[i], "-cfg=", 5))
             sys.sCFGFile = &argv[i][5];
+        else if (!strncmp(argv[i], "-cheats=", 8))
+            sys.sCheatPayload = &argv[i][8];
         else if (!strncmp(argv[i], "-udpfs_ip=", 10))
             sys.sUDPFSIP = &argv[i][10];
         else if (!strncmp(argv[i], "-igr=", 5))
@@ -941,6 +944,11 @@ int main(int argc, char *argv[])
         toml_free(toml_compat);
     }
 
+    // Append user-selected cheats after every compatibility config has loaded.
+    // Disabling LUNA cheats leaves the existing compatibility patches intact.
+    if (sys.sCheatPayload != NULL && config_load_cheat_payload(sys.sCheatPayload) < 0)
+        return -1;
+
     /*
      * Set CDVDMAN settings
      */
@@ -1284,7 +1292,7 @@ int main(int argc, char *argv[])
     }
     if (set_ee_core->CheatList != NULL) {
         printf("- cheats:\n");
-        for (int *cht = set_ee_core->CheatList; *cht != 0; cht+=2) {
+        for (int *cht = set_ee_core->CheatList; cht[0] != 0 || cht[1] != 0; cht+=2) {
             printf("  - 0x%08x 0x%08x\n", cht[0], cht[1]);
         }
     }
