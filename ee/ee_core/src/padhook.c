@@ -72,12 +72,16 @@ static void luna_return_home(void)
     SifInitRpc(0);
 
     // The game IOP has already reset, so no pad/card driver can race SIO2.
-    // Restore both MMCE boot cards before the browser or mcX: launcher reads.
+    // Restore only the cards switched by this session's enabled preference.
     SifInitIopHeap();
     SifLoadFileInit();
     sbv_patch_enable_lmb();
-    int mmce_result;
-    SifExecModuleBuffer(mmceigr_irx, size_mmceigr_irx, sizeof("11"), "11", &mmce_result);
+    if (eec.flags & EECORE_FLAG_MMCE_MASK) {
+        int mmce_result;
+        char slots[] = {(eec.flags & EECORE_FLAG_MMCE_SLOT0) ? '1' : '0',
+                        (eec.flags & EECORE_FLAG_MMCE_SLOT1) ? '1' : '0', '\0'};
+        SifExecModuleBuffer(mmceigr_irx, size_mmceigr_irx, sizeof(slots), slots, &mmce_result);
+    }
 
     // The HDD-chain target deliberately does not remount the game drive from
     // the resident IGR environment. Return through the standard PS2 browser

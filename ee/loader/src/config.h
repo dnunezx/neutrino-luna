@@ -37,6 +37,7 @@ struct SSystemSettings {
     int bDebug;
     int bLogo;
     int bQuickBoot;
+    int bMMCEGameID;
 
     struct {
         // CDVDMAN settings
