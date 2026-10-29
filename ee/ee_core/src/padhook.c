@@ -49,6 +49,8 @@ static u8 IGR_Stack[IGR_STACK_SIZE] __attribute__((aligned(16)));
 extern void *_gp;
 extern void *_stack_end;
 extern int _iop_reboot_count;
+extern unsigned char mmceigr_irx[];
+extern unsigned int size_mmceigr_irx;
 extern u32 (*Old_SifSetDma)(SifDmaTransfer_t *sdd, s32 len);
 extern int (*Old_SifSetReg)(u32 register_num, int register_value);
 
@@ -69,23 +71,27 @@ static void luna_return_home(void)
 
     SifInitRpc(0);
 
+    // The game IOP has already reset, so no pad/card driver can race SIO2.
+    // Restore both MMCE boot cards before the browser or mcX: launcher reads.
+    SifInitIopHeap();
+    SifLoadFileInit();
+    sbv_patch_enable_lmb();
+    int mmce_result;
+    SifExecModuleBuffer(mmceigr_irx, size_mmceigr_irx, sizeof("11"), "11", &mmce_result);
+
     // The HDD-chain target deliberately does not remount the game drive from
     // the resident IGR environment. Return through the standard PS2 browser
     // path so the console initializes the HDD and executes the installed
     // ROCKET MBR. GalaxyHDD maps the still-held START trigger back to LUNA.
     if (eec.ExitPath[0] == 'h' && eec.ExitPath[1] == 'd' && eec.ExitPath[2] == 'd' && eec.ExitPath[3] == '\0') {
+        SifExitIopHeap();
+        SifLoadFileExit();
         SifExitRpc();
         FlushCache(WRITEBACK_DCACHE);
         FlushCache(INVALIDATE_ICACHE);
         Exit(0);
         luna_igr_fail();
     }
-
-    // Reset_Iop() leaves the EE-side RPC/load-file clients shut down. Rebuild
-    // them before loading the memory-card modules and the launcher ELF.
-    SifInitIopHeap();
-    SifLoadFileInit();
-    sbv_patch_enable_lmb();
 
     sbv_patch_disable_prefix_check();
 

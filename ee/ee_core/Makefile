@@ -18,7 +18,7 @@ GSMCORE_EE_OBJS = gsm_api.o ee_exception_l2.o
 CHEATCORE_EE_OBJS = cheat_engine.o cheat_api.o
 
 EE_OBJS = main.o iopmgr.o loadfile.o util.o patches.o patches_asm.o \
-	  asm.o crt0.o ps2logo.o padhook.o luna_igr_rpc.o tlb.o \
+	  asm.o crt0.o ps2logo.o padhook.o luna_igr_rpc.o tlb.o mmceigr_irx.o \
 	  $(GSMCORE_EE_OBJS) $(CHEATCORE_EE_OBJS)
 MAPFILE = ee_core.map
 
@@ -63,6 +63,13 @@ $(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) $(EE_CFLAGS) $(EE_LDFLAGS) -o $(EE_BIN) $(EE_OBJS) $(EE_LIBS)
 
 all: $(EE_BIN)
+
+$(EE_OBJS_DIR)mmceigr_irx.c: $(PS2SDK)/iop/irx/mmceigr.irx
+	@mkdir -p $(EE_OBJS_DIR)
+	$(PS2SDK)/bin/bin2c $< $@ mmceigr_irx
+
+$(EE_OBJS_DIR)mmceigr_irx.o: $(EE_OBJS_DIR)mmceigr_irx.c
+	$(EE_CC) $(EE_CFLAGS) -c $< -o $@
 
 clean:
 	rm -f -r $(EE_OBJS_DIR) $(EE_BIN) $(MAPFILE)

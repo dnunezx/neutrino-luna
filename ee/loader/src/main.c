@@ -41,6 +41,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "ioprp.h"
 #include "iso_cnf.h"
 #include "xparam.h"
+#include "mmce.h"
 #include "tomlc17.h"
 
 #define NEWLIB_PORT_AWARE
@@ -1314,6 +1315,7 @@ int main(int argc, char *argv[])
      * **********************************************************************
      */
 
+    mmce_set_gameid(sGameID, sys.sBSD);
     ExecPS2((void *)eh->entry, NULL, ee_core_argc, ee_core_argv);
 
     return 0;
