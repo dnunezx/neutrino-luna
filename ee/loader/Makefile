@@ -1,7 +1,7 @@
 # LUNA 2026
 GIT_TAG = $(shell git describe --tags --exclude=latest)
 
-EE_OBJS = main.o modlist.o config.o fhi_config.o pfs_vmc.o vmc_image.o xparam.o patch.o ioprp.o tomlc17.o iso_cnf.o
+EE_OBJS = main.o modlist.o config.o fhi_config.o pfs_vmc.o vmc_image.o xparam.o patch.o ioprp.o tomlc17.o iso_cnf.o mmce.o mmceman_irx.o sio2man_irx.o
 EE_LIBS = -lfileXio -lpatches
 EE_CFLAGS = -DGIT_TAG=\"$(GIT_TAG)\"
 
@@ -35,3 +35,10 @@ clean:
 
 include $(PS2SDK)/Defs.make
 include ../Rules.make
+
+$(EE_OBJS_DIR)%_irx.c: $(PS2SDK)/iop/irx/%.irx
+	@mkdir -p $(EE_OBJS_DIR)
+	$(PS2SDK)/bin/bin2c $< $@ $*_irx
+
+$(EE_OBJS_DIR)%_irx.o: $(EE_OBJS_DIR)%_irx.c
+	$(EE_CC) $(EE_CFLAGS) -c $< -o $@

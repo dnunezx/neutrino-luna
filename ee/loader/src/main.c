@@ -39,6 +39,7 @@ _off64_t lseek64 (int __filedes, _off64_t __offset, int __whence); // should be 
 #include "ioprp.h"
 #include "iso_cnf.h"
 #include "xparam.h"
+#include "mmce.h"
 #include "tomlc17.h"
 
 #define NEWLIB_PORT_AWARE
@@ -201,6 +202,8 @@ static int parse_cmdline_args(int argc, char *argv[], int *out_iELFArgcStart)
             sys.sUDPFSIP = &argv[i][10];
         else if (!strncmp(argv[i], "-igr=", 5))
             sys.sIGRPath = &argv[i][5];
+        else if (!strcmp(argv[i], "-mmce-gameid"))
+            sys.bMMCEGameID = 1;
         else if (!strncmp(argv[i], "-cwd=", 5))
             continue; // already handled before config loading
         else if (!strncmp(argv[i], "-dbc", 4))
@@ -1189,6 +1192,11 @@ int main(int argc, char *argv[])
         sys.eecore.mod_checksum_4k[j] = ssv;
         pms += 1024;
     }
+
+    // All runtime/config files are in RAM. Record only the physical slots
+    // that accepted this session's opt-in card switch for IGR restoration.
+    sys.eecore.flags &= ~EECORE_FLAG_MMCE_MASK;
+    sys.eecore.flags |= mmce_set_gameid(sGameID, sys.sBSD, sys.bMMCEGameID) << EECORE_FLAG_MMCE_SHIFT;
 
     // Copy settings to module memory
     *set_ee_core = sys.eecore;

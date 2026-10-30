@@ -31,6 +31,10 @@ typedef struct
 #define EECORE_FLAG_LOGO_PATCH  (1<<3) // PS2LOGO: apply region patch (console region ≠ game region)
 #define EECORE_FLAG_LOGO_PAL    (1<<4) // PS2LOGO: force PAL mode (only meaningful if LOGO_PATCH set)
 #define EECORE_FLAG_IGR          (1<<5) // LUNA: enable direct in-game return
+#define EECORE_FLAG_MMCE_SHIFT 6
+#define EECORE_FLAG_MMCE_SLOT0 (1u << EECORE_FLAG_MMCE_SHIFT)
+#define EECORE_FLAG_MMCE_SLOT1 (1u << (EECORE_FLAG_MMCE_SHIFT + 1))
+#define EECORE_FLAG_MMCE_MASK (EECORE_FLAG_MMCE_SLOT0 | EECORE_FLAG_MMCE_SLOT1)
 
 #define EECORE_EXIT_PATH_MAX 128
 #define EECORE_EXIT_HDD_CHAIN "hdd"
