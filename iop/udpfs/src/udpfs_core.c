@@ -257,10 +257,17 @@ int udpfs_core_init(void)
     M_DEBUG("UDPFS: discovering server...\n");
     ret = udprdma_discover(g_socket, 5000);
     if (ret != UDPRDMA_OK) {
+#ifdef FEATURE_UDPFS_FHI
+        /* The link may still be negotiating after an IOP reboot. Stay
+         * loaded: fhi_read() and fhi_write() connect on first use. */
+        M_DEBUG("UDPFS: server not found, will retry on first access\n");
+        return 0;
+#else
         M_DEBUG("UDPFS: server not found\n");
         udprdma_destroy(g_socket);
         g_socket = NULL;
         return -1;
+#endif
     }
 
     M_DEBUG("UDPFS: connected to %d.%d.%d.%d\n",
@@ -291,6 +298,26 @@ void udpfs_core_exit(void)
 int udpfs_core_is_connected(void)
 {
     return udprdma_is_connected(g_socket);
+}
+
+/*
+ * Connect to the server if not connected yet. Returns 0 when connected.
+ */
+int udpfs_core_connect(uint32_t timeout_ms)
+{
+    if (g_socket == NULL)
+        return -1;
+    if (udprdma_is_connected(g_socket))
+        return 0;
+    if (udprdma_discover(g_socket, timeout_ms) != UDPRDMA_OK)
+        return -1;
+
+    M_DEBUG("UDPFS: connected to %d.%d.%d.%d\n",
+        (udprdma_get_peer_ip(g_socket) >> 24) & 0xFF,
+        (udprdma_get_peer_ip(g_socket) >> 16) & 0xFF,
+        (udprdma_get_peer_ip(g_socket) >>  8) & 0xFF,
+        (udprdma_get_peer_ip(g_socket) >>  0) & 0xFF);
+    return 0;
 }
 
 /*
