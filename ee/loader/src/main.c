@@ -800,6 +800,31 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // The IGR target comes from command-line parsing; later game configs
+    // cannot change it. Reject invalid targets before the optional IOP reset.
+    if (sys.sIGRPath != NULL && sys.sIGRPath[0] != '\0') {
+        int invalid_igr_device = strcmp(sys.sIGRPath, EECORE_EXIT_HDD_CHAIN) &&
+                                 strncmp(sys.sIGRPath, "mc0:", 4) && strncmp(sys.sIGRPath, "mc1:", 4);
+#ifdef LUNA_EMULATOR_HOST_IGR
+        invalid_igr_device = invalid_igr_device && strncmp(sys.sIGRPath, "host:", 5);
+#endif
+        if (invalid_igr_device) {
+#ifdef LUNA_EMULATOR_HOST_IGR
+            printf("ERROR: -igr target must be hdd, mc0:, mc1:, or emulator host:\n");
+#else
+            printf("ERROR: -igr target must be hdd, mc0:, or mc1:\n");
+#endif
+            return -1;
+        }
+        if (strlen(sys.sIGRPath) >= sizeof(sys.eecore.ExitPath)) {
+            printf("ERROR: -igr path is too long (maximum %u characters)\n", (unsigned int)sizeof(sys.eecore.ExitPath) - 1);
+            return -1;
+        }
+        strncpy(sys.eecore.ExitPath, sys.sIGRPath, sizeof(sys.eecore.ExitPath) - 1);
+        sys.eecore.ExitPath[sizeof(sys.eecore.ExitPath) - 1] = '\0';
+        sys.eecore.flags |= EECORE_FLAG_IGR;
+    }
+
     /*
      * Load all needed files before rebooting the IOP
      */
@@ -1155,28 +1180,6 @@ int main(int argc, char *argv[])
     strncpy(sys.eecore.GameID, sGameID, 12);
     sys.eecore.CheatList     = NULL;
     sys.eecore.ModStorageEnd = irxptr_end;
-    if (sys.sIGRPath != NULL && sys.sIGRPath[0] != '\0') {
-        int invalid_igr_device = strcmp(sys.sIGRPath, EECORE_EXIT_HDD_CHAIN) &&
-                                 strncmp(sys.sIGRPath, "mc0:", 4) && strncmp(sys.sIGRPath, "mc1:", 4);
-#ifdef LUNA_EMULATOR_HOST_IGR
-        invalid_igr_device = invalid_igr_device && strncmp(sys.sIGRPath, "host:", 5);
-#endif
-        if (invalid_igr_device) {
-#ifdef LUNA_EMULATOR_HOST_IGR
-            printf("ERROR: -igr target must be hdd, mc0:, mc1:, or emulator host:\n");
-#else
-            printf("ERROR: -igr target must be hdd, mc0:, or mc1:\n");
-#endif
-            return -1;
-        }
-        if (strlen(sys.sIGRPath) >= sizeof(sys.eecore.ExitPath)) {
-            printf("ERROR: -igr path is too long (maximum %u characters)\n", (unsigned int)sizeof(sys.eecore.ExitPath) - 1);
-            return -1;
-        }
-        strncpy(sys.eecore.ExitPath, sys.sIGRPath, sizeof(sys.eecore.ExitPath) - 1);
-        sys.eecore.ExitPath[sizeof(sys.eecore.ExitPath) - 1] = '\0';
-        sys.eecore.flags |= EECORE_FLAG_IGR;
-    }
 
     // Append cheat data after IRX table and point CheatList to it
     if (sys.cheats != NULL && sys.cheats_count > 0) {
