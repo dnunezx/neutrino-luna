@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
     // Restore the usual startup CWD using the full executable path.
     if (handoff > 0) _libcglue_args_parse(argc, argv);
     int i, j;
-    char sGameID[12];
+    char sGameID[12] = {0};
     int fd_system_cnf;
     char system_cnf_data[128] = {0};
     char romver[16];
@@ -1206,7 +1206,9 @@ int main(int argc, char *argv[])
     // All runtime/config files are in RAM. Record only the physical slots
     // that accepted this session's opt-in card switch for IGR restoration.
     sys.eecore.flags &= ~EECORE_FLAG_MMCE_MASK;
-    sys.eecore.flags |= mmce_set_gameid(sGameID, sys.sBSD, sys.bMMCEGameID) << EECORE_FLAG_MMCE_SHIFT;
+    sys.eecore.flags |= mmce_set_gameid(sGameID, sys.sBSD, sys.bMMCEGameID,
+                                       argc > 0 ? argv[0] : NULL,
+                                       sys.eecore.flags & EECORE_FLAG_IGR) << EECORE_FLAG_MMCE_SHIFT;
 
     // Copy settings to module memory
     *set_ee_core = sys.eecore;

@@ -1,7 +1,7 @@
 // LUNA 2026
 #include <loadfile.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
 #define NEWLIB_PORT_AWARE
 #include <fileXio_rpc.h>
 #include "mmce.h"
@@ -11,7 +11,22 @@ extern unsigned int size_mmceman_irx;
 extern unsigned char sio2man_irx[];
 extern unsigned int size_sio2man_irx;
 
-unsigned int mmce_set_gameid(const char *gameid, const char *bsd, int enabled)
+// Adapted from Warksmith's GameID implementation. The loader disables the
+// extra timer services, so libc sleep calls cannot pace card-status polling.
+static void mmce_wait_ms(unsigned int ms)
+{
+    uint32_t start, now;
+
+    while (ms--) {
+        __asm__ __volatile__("mfc0 %0, $9" : "=r"(start));
+        do {
+            __asm__ __volatile__("mfc0 %0, $9" : "=r"(now));
+        } while ((uint32_t)(now - start) < 294912); // EE clock / 1000
+    }
+}
+
+unsigned int mmce_set_gameid(const char *gameid, const char *bsd, int enabled,
+                             const char *launcher_path, int igr_enabled)
 {
     if (!enabled || !gameid || !gameid[0] || strlen(gameid) > 249 ||
         (bsd && !strcmp(bsd, "mx4sio")))
@@ -39,14 +54,19 @@ unsigned int mmce_set_gameid(const char *gameid, const char *bsd, int enabled)
 
     unsigned int switched = 0;
     char device[] = "mmce0:";
+    char launcher_card[] = "mc0:";
     for (int slot = 0; slot < 2; slot++) {
         device[4] = '0' + slot;
+        launcher_card[2] = '0' + slot;
+        // Without IGR the boot card cannot be restored before LUNA reloads.
+        if (!igr_enabled && launcher_path && !strncmp(launcher_path, launcher_card, 4))
+            continue;
         if (fileXioDevctl(device, 0x01, NULL, 0, NULL, 0) < 0 ||
             fileXioDevctl(device, 0x08, (void *)gameid, strlen(gameid) + 1, NULL, 0) < 0)
             continue;
         switched |= 1u << slot;
         for (int poll = 0; poll < 150; poll++) {
-            usleep(100000);
+            mmce_wait_ms(100);
             int status = fileXioDevctl(device, 0x02, NULL, 0, NULL, 0);
             if (status < 0 || !(status & 1))
                 break;
