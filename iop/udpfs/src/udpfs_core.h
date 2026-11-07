@@ -21,6 +21,9 @@ void udpfs_core_exit(void);
 /* Query connection status (returns 1 if connected, 0 otherwise) */
 int udpfs_core_is_connected(void);
 
+/* Connect to the server if not connected yet (returns 0 when connected) */
+int udpfs_core_connect(uint32_t timeout_ms);
+
 /* Open file or directory
  * is_dir: 1 to open as directory, 0 for file
  * Returns server handle via handle_out on success, negative errno on error

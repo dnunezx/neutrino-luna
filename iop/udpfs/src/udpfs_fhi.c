@@ -24,6 +24,11 @@
 /* Module settings - populated by EE loader via MODULE_SETTINGS_MAGIC scan */
 struct fhi_fileid fhi = {MODULE_SETTINGS_MAGIC};
 
+/* Retry reads while the link recovers after an IOP reboot. Each discovery
+ * attempt has a two-second budget; block reads have their own timeouts. */
+#define FHI_READ_ATTEMPTS      5
+#define FHI_CONNECT_TIMEOUT_MS 2000
+
 /* Semaphore for thread-safe I/O operations */
 static int g_sema = -1;
 
@@ -45,14 +50,12 @@ uint32_t fhi_size(int file_handle)
 int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned int sector_count)
 {
     int32_t server_handle;
-    int ret;
+    int attempt, ret = -1;
 
     M_DEBUG("%s(file_handle=%d, sector_start=%u, sector_count=%u)\n",
         __FUNCTION__, file_handle, sector_start, sector_count);
 
     if (file_handle < 0 || file_handle >= FHI_MAX_FILES)
-        return 0;
-    if (!udpfs_core_is_connected())
         return 0;
 
     server_handle = fhi.file[file_handle].id;
@@ -61,15 +64,20 @@ int fhi_read(int file_handle, void *buffer, unsigned int sector_start, unsigned 
 
     WaitSema(g_sema);
 
-    ret = udpfs_core_bread(server_handle, (uint64_t)sector_start, buffer, sector_count, 512);
-    if (ret < 0) {
-        M_DEBUG("udpfs_fhi: read failed\n");
-        SignalSema(g_sema);
-        return 0;
+    /* Retry transient connection/read failures using the pre-opened handle.
+     * Rediscovery preserves handles while the same server stays running;
+     * restarting the server requires relaunching to open fresh handles. */
+    for (attempt = 0; attempt < FHI_READ_ATTEMPTS; attempt++) {
+        if (udpfs_core_connect(FHI_CONNECT_TIMEOUT_MS) == 0) {
+            ret = udpfs_core_bread(server_handle, (uint64_t)sector_start, buffer, sector_count, 512);
+            if (ret >= 0)
+                break;
+        }
+        M_DEBUG("udpfs_fhi: read attempt %d failed\n", attempt + 1);
     }
 
     SignalSema(g_sema);
-    return sector_count;
+    return ret < 0 ? 0 : sector_count;
 }
 
 /*
@@ -81,8 +89,6 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 
     if (file_handle < 0 || file_handle >= FHI_MAX_FILES)
         return 0;
-    if (!udpfs_core_is_connected())
-        return 0;
 
     server_handle = fhi.file[file_handle].id;
     if (server_handle < 0)
@@ -90,7 +96,7 @@ int fhi_write(int file_handle, const void *buffer, unsigned int sector_start, un
 
     WaitSema(g_sema);
 
-    if (udpfs_core_bwrite(server_handle,
+    if (udpfs_core_connect(FHI_CONNECT_TIMEOUT_MS) < 0 || udpfs_core_bwrite(server_handle,
             (uint64_t)sector_start, buffer, sector_count, 512) < 0) {
         M_DEBUG("udpfs_fhi: write failed\n");
         SignalSema(g_sema);
