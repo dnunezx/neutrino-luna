@@ -1,5 +1,6 @@
 // LUNA 2026
 #include <loadfile.h>
+#include <smod.h>
 #include <stdint.h>
 #include <string.h>
 #define NEWLIB_PORT_AWARE
@@ -10,6 +11,14 @@ extern unsigned char mmceman_irx[];
 extern unsigned int size_mmceman_irx;
 extern unsigned char sio2man_irx[];
 extern unsigned int size_sio2man_irx;
+
+static int mmce_module_loaded(const char *name)
+{
+    smod_mod_info_t info;
+    // ROM LOADFILE does not provide SifSearchModuleByName's RPC, even with
+    // the load-module-buffer patch. Inspect the resident IOP module list.
+    return smod_get_mod_by_name(name, &info) > 0;
+}
 
 // Adapted from Warksmith's GameID implementation. The loader disables the
 // extra timer services, so libc sleep calls cannot pace card-status polling.
@@ -32,17 +41,17 @@ unsigned int mmce_set_gameid(const char *gameid, const char *bsd, int enabled,
         (bsd && !strcmp(bsd, "mx4sio")))
         return 0;
     // QuickBoot can retain MX4SIO from LUNA even for an HDD/USB launch.
-    if (SifSearchModuleByName("mx4sio") >= 0)
+    if (mmce_module_loaded("mx4sio"))
         return 0;
-    if (SifSearchModuleByName("IOX/File_Manager_Rpc") < 0)
+    if (!mmce_module_loaded("IOX/File_Manager_Rpc"))
         return 0;
 
     // Called only after loading every runtime/config file. Switching the card
     // earlier can hide Neutrino itself when LUNA is installed on mc0:/mc1:.
-    if (SifSearchModuleByName("mmceman") < 0) {
+    if (!mmce_module_loaded("mmceman")) {
         int result;
         // Old ROM SIO2MAN versions lack the reset exports MMCEMAN needs.
-        if (SifSearchModuleByName("sio2man") < 0) {
+        if (!mmce_module_loaded("sio2man")) {
             if (SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, &result) < 0 || result == 1)
                 return 0;
         }
