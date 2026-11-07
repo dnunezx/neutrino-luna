@@ -59,6 +59,8 @@ enum EECORE_GSM_COMP_MODE
 
 // Interface to loader
 #define EEC_MOD_CHECKSUM_COUNT 32
+// Separate from generic IRX settings; change this when the core ABI changes.
+#define EECORE_SETTINGS_MAGIC 0x45454303
 struct ee_core_data
 {
     // Magic number to find
@@ -79,6 +81,7 @@ struct ee_core_data
     void *ModStorageEnd;
     // Checksums for modules at: 0x95000 - 0xb5000 = 128KiB
     uint32_t mod_checksum_4k[EEC_MOD_CHECKSUM_COUNT];
+    uint32_t SettingsSize;
 } __attribute__((packed, aligned(4)));
 
 extern struct ee_core_data eec;

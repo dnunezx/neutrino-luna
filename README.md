@@ -194,6 +194,14 @@ loader that rejects `host:` and returns to the PS2 browser. Copy the resulting
 `ee/loader/neutrino.elf` to the emulator runtime only. Rebuild without the flag
 for hardware packages, which use `hdd`, `mc0:`, or `mc1:` return targets.
 
+## Matching loader and EE core
+
+Install `neutrino.elf` and `modules/ee_core.elf` from the same runtime package.
+The loader checks the core's settings signature, size and buffer bounds before
+resetting the IOP or switching memory cards. Older or incompatible settings
+layouts are rejected with an instruction to install the complete matching
+runtime. Replacing only `neutrino.elf` is not sufficient for this update.
+
 ## UDPFS / UDPBD PC Server
 
 The `pc/udpfs_server.py` script serves files and/or block devices to the PS2 over UDP (Ethernet).

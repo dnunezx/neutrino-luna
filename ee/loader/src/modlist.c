@@ -163,6 +163,20 @@ void *module_get_settings(struct SModule *mod)
     return settings;
 }
 
+struct ee_core_data *module_get_eecore_settings(struct SModule *mod)
+{
+    if (mod == NULL || mod->pData == NULL || mod->iSize < (off_t)sizeof(struct ee_core_data))
+        return NULL;
+
+    for (off_t i = 0; i <= mod->iSize - (off_t)sizeof(struct ee_core_data); i += 4) {
+        struct ee_core_data *settings = (void *)((char *)mod->pData + i);
+        if (settings->magic == EECORE_SETTINGS_MAGIC &&
+            settings->SettingsSize == sizeof(*settings))
+            return settings;
+    }
+    return NULL;
+}
+
 static void print_iop_args(int arg_len, const char *args)
 {
     // Multiple null-terminated strings packed together

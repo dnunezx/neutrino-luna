@@ -808,6 +808,14 @@ int main(int argc, char *argv[])
         printf("ERROR: failed to load ee_core\n");
         return -1;
     }
+    // Validate the complete settings layout before IOP reset or card switching.
+    struct ee_core_data *set_ee_core = module_get_eecore_settings(&mod_ee_core);
+    if (set_ee_core == NULL) {
+        printf("ERROR: incompatible ee_core.elf; install the complete matching Neutrino runtime\n");
+        return -1;
+    }
+    sys.eecore.magic = EECORE_SETTINGS_MAGIC;
+    sys.eecore.SettingsSize = sizeof(sys.eecore);
     if (modlist_load(&drv.mod, (sys.bQuickBoot == 0) ? (MOD_ENV_LE | MOD_ENV_EE) : MOD_ENV_EE) < 0) {
         printf("ERROR: failed to load drv.mod\n");
         return -1;
@@ -853,9 +861,6 @@ int main(int argc, char *argv[])
         if (modlist_get_by_name(&drv.mod, "fileXio.irx") != NULL)
             fileXioInit();
     }
-
-    // Load EE_CORE settings
-    struct ee_core_data *set_ee_core = module_get_settings(&mod_ee_core);
 
     // Detect active FHI backing store and zero its settings struct
     int fhi_active = (fhi_config_init(&drv.mod) == 0);
