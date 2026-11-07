@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 // PS2SDK
 #include <loadfile.h>
@@ -44,14 +45,33 @@ int module_load(struct SModule *mod)
 
     // Get module size
     mod->iSize = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
+    if (mod->iSize <= 0 || lseek(fd, 0, SEEK_SET) < 0)
+        goto load_failed;
 
     // Allocate memory and load module
     mod->pData = malloc(mod->iSize); // NOTE: never freed, but we don't care
-    read(fd, mod->pData, mod->iSize);
+    if (mod->pData == NULL)
+        goto load_failed;
+    off_t loaded = 0;
+    while (loaded < mod->iSize) {
+        ssize_t count = read(fd, (char *)mod->pData + loaded, mod->iSize - loaded);
+        if (count < 0 && errno == EINTR)
+            continue;
+        if (count <= 0)
+            goto load_failed;
+        loaded += count;
+    }
     close(fd);
 
     return 0;
+
+load_failed:
+    printf("ERROR: Could not read complete module %s\n", mod->sFileName);
+    close(fd);
+    free(mod->pData);
+    mod->pData = NULL;
+    mod->iSize = 0;
+    return -1;
 }
 
 int modlist_load(struct SModList *ml, unsigned int filter)
@@ -130,9 +150,9 @@ void *module_get_settings(struct SModule *mod)
 {
     void *settings = NULL;
 
-    if (mod != NULL) {
-        int i;
-        for (i = 0; i < mod->iSize; i += 4) {
+    if (mod != NULL && mod->pData != NULL && mod->iSize >= (off_t)sizeof(uint32_t)) {
+        off_t i;
+        for (i = 0; i <= mod->iSize - (off_t)sizeof(uint32_t); i += 4) {
             if (*(uint32_t *)(mod->pData + i) == MODULE_SETTINGS_MAGIC) {
                 settings = (void *)(mod->pData + i);
                 break;
@@ -141,6 +161,20 @@ void *module_get_settings(struct SModule *mod)
     }
 
     return settings;
+}
+
+struct ee_core_data *module_get_eecore_settings(struct SModule *mod)
+{
+    if (mod == NULL || mod->pData == NULL || mod->iSize < (off_t)sizeof(struct ee_core_data))
+        return NULL;
+
+    for (off_t i = 0; i <= mod->iSize - (off_t)sizeof(struct ee_core_data); i += 4) {
+        struct ee_core_data *settings = (void *)((char *)mod->pData + i);
+        if (settings->magic == EECORE_SETTINGS_MAGIC &&
+            settings->SettingsSize == sizeof(*settings))
+            return settings;
+    }
+    return NULL;
 }
 
 static void print_iop_args(int arg_len, const char *args)

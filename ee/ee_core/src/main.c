@@ -32,7 +32,10 @@ static int callcount = 0;
 
 // Global data
 u32 g_ee_core_flags = 0; // easy to use copy for asm.S
-struct ee_core_data eec = {MODULE_SETTINGS_MAGIC};
+struct ee_core_data eec = {
+    .magic = EECORE_SETTINGS_MAGIC,
+    .SettingsSize = sizeof(struct ee_core_data)
+};
 
 // This function is defined as weak in ps2sdkc, so how
 // we are not using time zone, so we can safe some KB

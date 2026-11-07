@@ -54,6 +54,7 @@ struct SModule *modlist_get_by_udnlname(struct SModList *ml, const char *name);
 struct SModule *modlist_get_by_func(struct SModList *ml, const char *func);
 
 void           *module_get_settings(struct SModule *mod);
+struct ee_core_data *module_get_eecore_settings(struct SModule *mod);
 uint8_t        *module_install(struct SModule *mod, uint8_t *addr, irxptr_t *irx);
 
 #endif
